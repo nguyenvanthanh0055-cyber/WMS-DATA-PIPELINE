@@ -1,3 +1,4 @@
+import random
 import time
 import requests
 import logging
@@ -24,10 +25,11 @@ def get_json(
     ) -> Any:
     
     for i in range(max_retries + 1):
-        sleep_s = 0.5 * (i ** 2)
+        base = 0.5 * (2 ** i)
+        sleep_s = base * (0.5 + 0.5 * random.random())
         try:
             resp = session.get(url=url, params=params, timeout=timeout)
-            if resp.status_code in (429, 501, 502, 503):
+            if resp.status_code in (429, 500, 502, 503, 504):
                 if i == max_retries:
                     resp.raise_for_status()
                 logger.warning(
@@ -36,17 +38,20 @@ def get_json(
                 )
                 time.sleep(sleep_s)
                 continue
-        
+            if resp.status_code >= 400:
+                resp.raise_for_status()
             try:
                 return resp.json()
-            except ValueError:
-                    raise ValueError(f"Response is not a JSON. Status Code: {resp.status_code}")
+            except ValueError as e:
+                    raise RuntimeError(
+                    f"Response is not JSON: url={resp.url} status={resp.status_code} body={resp.text[:300]}"
+                    ) from e
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
             if i == max_retries:
                 raise
             logger.warning(
-                "Network error %s for %s (attempt %d/%d). Sleep %.2fs",
-                resp.status_code, url, i+1, max_retries+1, sleep_s
+                "Network error  for %s (attempt %d/%d): %s. Sleep %.2fs",
+                 url, i+1, max_retries+1, str(e), sleep_s
             )
             time.sleep(sleep_s)
             
