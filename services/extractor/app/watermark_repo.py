@@ -62,3 +62,4 @@ def upsert_watermark(
             "r": run_id
             
         })
+        conn.commit()
