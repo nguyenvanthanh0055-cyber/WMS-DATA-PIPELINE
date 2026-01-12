@@ -52,9 +52,6 @@ def load_config() -> Config:
     else:
         project_root = Path(__file__).resolve().parents[3]
         landing_root = project_root / "data" / "landing"
-    # project_root = Path(__file__).resolve().parents[3]
-    # landing_root = project_root / "data" / "landing"
-    
     return Config(
         wms_base_url = wms_base_url,
         pg_dsn = pg_dsn,

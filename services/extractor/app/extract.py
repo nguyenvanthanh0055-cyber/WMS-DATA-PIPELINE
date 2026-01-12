@@ -47,10 +47,10 @@ def fetch_all(
     
     while True:
         params = {
-        "updated_after": _to_iso(updated_after),
-        "limit": limit,
-        "offset": offset
-    }
+            "updated_after": _to_iso(updated_after),
+            "limit": limit,
+            "offset": offset,
+        }
         
         page = get_json(
             session=session,
@@ -63,11 +63,13 @@ def fetch_all(
         if not page:
             break
         
-        data = page.get("data",[])
+        data = page.get("data", [])
         meta = page.get("meta", {})
         
-        logger.info("[%s] page offset=%s page_size=%s meta_count=%s meta_offset=%s",
-            entity, offset, len(data), meta.get("count"), meta.get("offset"))
+        logger.info(
+            "[%s] page offset=%s page_size=%s meta_count=%s meta_offset=%s",
+            entity, offset, len(data), meta.get("count"), meta.get("offset")
+        )
         if not isinstance(data, list):
             raise RuntimeError(f"Unexpected API response type for {entity}: {type(data)}")
         
