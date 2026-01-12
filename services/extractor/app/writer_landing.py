@@ -9,7 +9,7 @@ def _ensure_dir(p: Path) -> None:
     p.mkdir(parents=True, exist_ok=True)
     
 def _atomic_replace(src: Path, dst: Path) -> None:
-    src.parent.mkdir(parents=True, exist_ok=True)
+    dst.parent.mkdir(parents=True, exist_ok=True)
     src.replace(dst)
     
 
@@ -34,8 +34,10 @@ def write_landing(
     
     final_path = run_dir / f"part-000.{ext}"
     
+    
     if final_path.exists():
         raise RuntimeError(f"Landing output already exists: {final_path}")
+    
     
     tmp_path = run_dir / f"part-000.{uuid.uuid4().hex}.tmp.{ext}"
     
@@ -43,9 +45,9 @@ def write_landing(
         logger.info("[%s] empty dataframe, writing empty landing file", entity)
     
     if output_format == "parquet":
-        df.to_parquet(tmp_path)
+        df.to_parquet(tmp_path, index=False)
     else:
-        df.to_csv(tmp_path)
+        df.to_csv(tmp_path, index=False)
     
     _atomic_replace(tmp_path, final_path)
     
