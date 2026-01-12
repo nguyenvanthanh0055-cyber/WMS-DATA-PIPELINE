@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 ENTITY_CFG = {
     "ib_receipts": {"path": "/ib/receipts"},
-    "ob_orders": {"path": "o/b/orders"}
+    "ob_orders": {"path": "/ob/orders"}
 }
 
 def _to_iso(dt: datetime) -> str:
@@ -43,13 +43,14 @@ def fetch_all(
     
     url = base_url.rstrip("/") + ENTITY_CFG[entity]["path"]
     
-    params = {
-        "updated_after": _to_iso(updated_after),
-        "limit": limit,
-        "offset": offset
-    }
+    
     
     while True:
+        params = {
+            "updated_after": _to_iso(updated_after),
+            "limit": limit,
+            "offset": offset,
+        }
         
         page = get_json(
             session=session,
@@ -62,7 +63,13 @@ def fetch_all(
         if not page:
             break
         
-        data = page["data"]
+        data = page.get("data", [])
+        meta = page.get("meta", {})
+        
+        logger.info(
+            "[%s] page offset=%s page_size=%s meta_count=%s meta_offset=%s",
+            entity, offset, len(data), meta.get("count"), meta.get("offset")
+        )
         if not isinstance(data, list):
             raise RuntimeError(f"Unexpected API response type for {entity}: {type(data)}")
         
