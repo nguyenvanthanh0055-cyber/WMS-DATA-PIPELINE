@@ -27,7 +27,7 @@ def _flatten_nested(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def normalize_rows(
-    rows: Any,
+    rows: list[dict[str, Any]],
     entity: str,
     run_id: str,
     extracted_at: datetime,
