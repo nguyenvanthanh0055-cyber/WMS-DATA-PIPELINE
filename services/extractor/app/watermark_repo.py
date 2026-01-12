@@ -5,7 +5,7 @@ from sqlalchemy.engine import Engine
 
 def _to_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
-        dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
 
 def _parse_default_iso(default_time_start: str) -> datetime:
@@ -43,7 +43,7 @@ def upsert_watermark(
     entity: str,
     new_wm: datetime,
     run_id: str
-) -> Any:
+) -> None:
     
     sql = text("""
                INSERT INTO etl_watermark (pipeline_name, entity, last_success_time, last_success_run_id)
