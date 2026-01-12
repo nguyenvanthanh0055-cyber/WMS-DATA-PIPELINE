@@ -46,9 +46,12 @@ def load_config() -> Config:
     request_timeout_seconds = _env_int("REQUEST_TIMEOUT_SECONDS", 20)
     
     default_start_time = os.getenv("DEFAULT_START_TIME", "1970-01-01T00:00:00Z")
-    project_root = Path(__file__).resolve().parents[3]
-    landing_root = project_root / "data" / "landing"
-    
+    landing_root_env = os.getenv("LANDING_ROOT")
+    if landing_root_env:
+        landing_root = Path(landing_root_env)
+    else:
+        project_root = Path(__file__).resolve().parents[3]
+        landing_root = project_root / "data" / "landing"
     return Config(
         wms_base_url = wms_base_url,
         pg_dsn = pg_dsn,
