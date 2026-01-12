@@ -29,7 +29,7 @@ def get_json(
         sleep_s = base * (0.5 + 0.5 * random.random())
         try:
             resp = session.get(url=url, params=params, timeout=timeout)
-            if resp.status_code in (429, 500, 502, 503, 504):
+            if resp.status_code in (408 ,429, 500, 502, 503, 504):
                 if i == max_retries:
                     resp.raise_for_status()
                 logger.warning(
@@ -55,5 +55,4 @@ def get_json(
             )
             time.sleep(sleep_s)
             
-            
-            
+    raise RuntimeError(f"Exhausted retries for url={url} params={params}")           
