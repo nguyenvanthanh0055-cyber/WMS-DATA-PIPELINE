@@ -1,0 +1,1 @@
+CREATE DATABASE wms_dw_test OWNER wms;

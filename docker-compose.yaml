@@ -5,11 +5,13 @@ x-airflow-common: &airflow-common
     dockerfile: Dockerfile
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
     AIRFLOW__CORE__LOAD_EXAMPLES: "False"
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
     AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
 
     PG_DSN: postgresql+psycopg2://wms:wms@dw-db:5432/wms_dw
+    TEST_PG_DSN: postgresql+psycopg2://wms:wms@dw-db:5432/wms_dw_test
     WMS_BASE_URL: http://localhost:8000
     PIPELINE_NAME: wms_dw
 
@@ -62,6 +64,7 @@ services:
     volumes:
       - dw_pg_data:/var/lib/postgresql/data
       - ./sql/init_dw.sql:/docker-entrypoint-initdb.d/init_dw.sql:ro
+      - ./sql/init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U wms -d wms_dw"]
       interval: 5s
