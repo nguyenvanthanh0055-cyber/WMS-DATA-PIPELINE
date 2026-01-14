@@ -54,7 +54,7 @@ def upsert_watermark(
                 last_success_run_id = excluded.last_success_run_id,
                 updated_at = NOW()
                """)
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         conn.execute(sql, {
             "p": pipeline_name,
             "e": entity,
@@ -62,4 +62,3 @@ def upsert_watermark(
             "r": run_id
             
         })
-        conn.commit()
