@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import text
 
-from services.extractor.app.config import load_config
+from services.common.config import load_config
 from services.extractor.app.watermark_repo import get_watermark, upsert_watermark
 
 cfg = load_config()
