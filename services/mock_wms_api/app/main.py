@@ -126,7 +126,7 @@ def seed_data():
     base_time = now_utc() - timedelta(hours=6)
 
     # Seed IB
-    for i in range(30):
+    for i in range(3000):
         t = base_time + timedelta(minutes=i * 5)
         receipt = IBReceipt(
             po_code=f"PO{20250000 + i}",
@@ -150,7 +150,7 @@ def seed_data():
         DB["ib"].append(receipt.model_dump())
 
     # Seed OB
-    for i in range(40):
+    for i in range(3000):
         t = base_time + timedelta(minutes=i * 4)
         order = OBOrder(
             so_code=f"SO{20250000 + i}",
