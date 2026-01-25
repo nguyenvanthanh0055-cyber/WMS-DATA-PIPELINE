@@ -1,4 +1,3 @@
-
 x-airflow-common: &airflow-common
   build:
     context: .
@@ -12,7 +11,7 @@ x-airflow-common: &airflow-common
 
     PG_DSN: postgresql+psycopg2://wms:wms@dw-db:5432/wms_dw
     TEST_PG_DSN: postgresql+psycopg2://wms:wms@dw-db:5432/wms_dw_test
-    WMS_BASE_URL: http://localhost:8000
+    WMS_BASE_URL: http://mock-api:8000
     PIPELINE_NAME: wms_dw
 
     LIMIT: "500"
@@ -83,11 +82,14 @@ services:
       - ./services/mock_wms_api/app:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()\""]
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/health'').read()"',
+        ]
       interval: 5s
       timeout: 3s
       retries: 10
-
 
   airflow-init:
     <<: *airflow-common
