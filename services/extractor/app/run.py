@@ -2,8 +2,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 import uuid
 
-from services.extractor.app.config import load_config
-from services.extractor.app.db import build_engine
+from services.common.config import load_config
+from services.common.db import build_engine
 from services.extractor.app.http_client import build_session
 from services.extractor.app.extract import fetch_all
 from services.extractor.app.normalize import normalize_rows
