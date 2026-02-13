@@ -123,11 +123,19 @@ DB: Dict[str, List[Dict[str, Any]]] = {
 
 def seed_data():
     random.seed(7)
-    base_time = now_utc() - timedelta(hours=6)
+    now = now_utc()
+    ib_count = 3000
+    ob_count = 3000
+    ib_step_minutes = 5
+    ob_step_minutes = 4
+    tail_lag_minutes = 5
+
+    ib_base_time = now - timedelta(minutes=(ib_count - 1) * ib_step_minutes + tail_lag_minutes)
+    ob_base_time = now - timedelta(minutes=(ob_count - 1) * ob_step_minutes + tail_lag_minutes)
 
     # Seed IB
-    for i in range(3000):
-        t = base_time + timedelta(minutes=i * 5)
+    for i in range(ib_count):
+        t = ib_base_time + timedelta(minutes=i * ib_step_minutes)
         receipt = IBReceipt(
             po_code=f"PO{20250000 + i}",
             po_date=(t.date().isoformat()),
@@ -136,8 +144,8 @@ def seed_data():
             processed_by=random.choice([None, "wms_user_a", "wms_user_b"]),
             contact_name=random.choice([None, "NCC A", "NCC B"]),
             contact_phone=random.choice([None, "0900000001", "0900000002"]),
-            client_id=1,
-            warehouse_id=101,
+            client_id=random.choice([x for x in range(1,20)]),
+            warehouse_id=random.choice([x for x in range(1,10)]),
             created_by="system",
             created_at=iso(t),
             updated_by="system",
@@ -150,8 +158,8 @@ def seed_data():
         DB["ib"].append(receipt.model_dump())
 
     # Seed OB
-    for i in range(3000):
-        t = base_time + timedelta(minutes=i * 4)
+    for i in range(ob_count):
+        t = ob_base_time + timedelta(minutes=i * ob_step_minutes)
         order = OBOrder(
             so_code=f"SO{20250000 + i}",
             expected_delivery_date=(t.date().isoformat()),
@@ -160,8 +168,8 @@ def seed_data():
             total_amount=float(random.randint(200000, 2000000)),
             actual_amount=0,
             note=random.choice([None, "fragile", "COD"]),
-            client_id=1,
-            warehouse_id=101,
+            client_id=random.choice([x for x in range(1,20)]),
+            warehouse_id=random.choice([x for x in range(1,10)]),
             status=random.choice([OBStatus.NEW, OBStatus.READYTOPICK]),
             total_cod_amount=0,
             total_weight=round(random.uniform(0.5, 30.0), 2),
@@ -179,6 +187,19 @@ def seed_data():
 
 
 seed_data()
+
+
+def _next_tick_time() -> datetime:
+    t = now_utc()
+    latest: Optional[datetime] = None
+    for group in ("ib", "ob"):
+        for row in DB[group]:
+            dt = datetime.fromisoformat(row["updated_at"])
+            if latest is None or dt > latest:
+                latest = dt
+    if latest is not None and t <= latest:
+        return latest + timedelta(seconds=1)
+    return t
 
 
 # ---------- Status transitions ----------
@@ -262,7 +283,7 @@ def simulate_tick(
     - update quantities
     - bump updated_at
     """
-    t = now_utc()
+    t = _next_tick_time()
     cancel_prob = 0.05
     # choose random IB receipts to mutate
     for x in random.sample(DB["ib"], k=min(n_changes, len(DB["ib"]))):
