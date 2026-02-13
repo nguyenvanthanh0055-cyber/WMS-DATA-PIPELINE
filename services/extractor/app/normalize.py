@@ -20,7 +20,7 @@ def _parse_cols_time(df: pd.DataFrame) -> pd.DataFrame:
 def _flatten_nested(df: pd.DataFrame) -> pd.DataFrame:
     if "lines" in df.columns:
         df["lines_json"] = df["lines"].apply(
-            lambda x: json.dumps(x, ensure_ascii=False) if x is not None else None
+            lambda x: json.dumps(x, ensure_ascii=False, sort_keys=True, separators=(",", ":")) if x is not None else None
         )
         df = df.drop(columns=["lines"])
     
