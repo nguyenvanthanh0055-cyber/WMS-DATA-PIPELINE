@@ -7,7 +7,7 @@ from services.common.db import build_engine
 
 
 DDL_WATERMARK = """
-create table if not exists etl_watermark (
+create table if not exists public.etl_watermark (
   pipeline_name text not null,
   entity text not null,
   last_success_time timestamptz not null,
@@ -17,10 +17,10 @@ create table if not exists etl_watermark (
 );
 
 create index if not exists idx_etl_watermark_updated_at
-on etl_watermark(updated_at);
+on public.etl_watermark(updated_at);
 
-create table if not exists pipeline_run_log (
-  run_id text primary key,
+create table if not exists public.pipeline_run_log (
+  run_id text,
   pipeline_name text not null,
   entity text not null,
   started_at timestamptz not null default now(),
@@ -28,14 +28,17 @@ create table if not exists pipeline_run_log (
   status text not null default 'running',
   rows_in int not null default 0,
   rows_inserted_history int not null default 0,
-  rows_upserted_latest int not null default 0,
-  error text
+  rows_affected_latest int not null default 0,
+  error text,
+  primary key (run_id, pipeline_name, entity)
 );
 
 create index if not exists idx_pipeline_run_log_entity_started
-on pipeline_run_log(entity, started_at);
+on public.pipeline_run_log(entity, started_at);
 
-create table if not exists stg_ib_receipts_history (
+create schema if not exists stg;
+
+create table if not exists stg.ib_receipts_history (
   id uuid not null,
   updated_at timestamptz not null,
   payload jsonb not null,
@@ -46,7 +49,7 @@ create table if not exists stg_ib_receipts_history (
   primary key (id, updated_at, payload_hash)
 );
 
-create table if not exists stg_ib_receipts(
+create table if not exists stg.ib_receipts(
   id uuid primary key,
   updated_at timestamptz not null,
   payload jsonb not null,
@@ -57,9 +60,9 @@ create table if not exists stg_ib_receipts(
 );
 
 create index if not exists idx_stg_ib_receipts_latest_updated_at
-on stg_ib_receipts(updated_at);
+on stg.ib_receipts(updated_at);
 
-create table if not exists stg_ob_orders_history (
+create table if not exists stg.ob_orders_history (
   id uuid not null,
   updated_at timestamptz not null,
   payload jsonb not null,
@@ -70,7 +73,7 @@ create table if not exists stg_ob_orders_history (
   primary key (id, updated_at, payload_hash)
 );
 
-create table if not exists stg_ob_orders (
+create table if not exists stg.ob_orders (
   id uuid primary key,
   updated_at timestamptz not null,
   payload jsonb not null,
@@ -81,7 +84,7 @@ create table if not exists stg_ob_orders (
 );
 
 create index if not exists idx_stg_ob_orders_latest_updated_at
-on stg_ob_orders(updated_at);
+on stg.ob_orders(updated_at);
 """
 
 
@@ -104,9 +107,9 @@ def engine(pg_dsn) -> Engine:
 
 
 @pytest.fixture(autouse=True)
-def _clean_watermark_table(engine):
+def _clean_table(engine):
     with engine.begin() as conn:
         conn.execute(text("TRUNCATE TABLE etl_watermark;"))
-        conn.execute(text("TRUNCATE stg_ib_receipts_history, stg_ib_receipts;"))
+        conn.execute(text("TRUNCATE stg.ib_receipts_history, stg.ib_receipts;"))
         conn.execute(text("TRUNCATE pipeline_run_log;"))
     

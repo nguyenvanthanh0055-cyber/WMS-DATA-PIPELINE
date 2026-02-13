@@ -1,10 +1,10 @@
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import text
 
-from services.common.config import load_config
-from services.extractor.app.watermark_repo import get_watermark, upsert_watermark
+from services.extractor.app.config import load_extract_config
+from services.common.watermark_repo import get_watermark, upsert_watermark
 
-cfg = load_config()
+cfg = load_extract_config()
 
 pipeline_name = cfg.pipeline_name
 def _utc(y, m, d, hh=0, mm=0, ss=0):

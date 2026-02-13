@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import text
 import uuid
 from services.staging.app.staging_repo import insert_history, upsert_stg_latest
-from services.staging.app.pipeline_run_logs_repo import start_run_log, finish_run_success
+from services.common.pipeline_run_logs_repo import start_run_log, finish_run_success
 
 def test_history_global_dedup(engine):
     records = [{
@@ -20,7 +20,7 @@ def test_history_global_dedup(engine):
 
     with engine.begin() as conn:
         n = conn.execute(
-            text("select count(*) from stg_ib_receipts_history where id=:id and payload_hash=:payload_hash"),
+            text("select count(*) from stg.ib_receipts_history where id=:id and payload_hash=:payload_hash"),
                  {"id": "550e8400-e29b-41d4-a716-446655440000","payload_hash":"h1"}
         ).scalar_one()
         
@@ -60,7 +60,7 @@ def test_latest_newer_wins(engine):
 
     with engine.begin() as conn:
         ts = conn.execute(
-            text("select updated_at from stg_ib_receipts where id=:id"),{"id":"550e8400-e29b-41d4-a716-446655440000"}
+            text("select updated_at from stg.ib_receipts where id=:id"),{"id":"550e8400-e29b-41d4-a716-446655440000"}
         ).scalar_one()
     assert str(ts).startswith("2026-01-23 10:05:00")
 
@@ -68,7 +68,7 @@ def test_latest_newer_wins(engine):
 
     with engine.begin() as conn:
         ts2 = conn.execute(
-            text("select updated_at from stg_ib_receipts where id=:id"),{"id":"550e8400-e29b-41d4-a716-446655440000"}
+            text("select updated_at from stg.ib_receipts where id=:id"),{"id":"550e8400-e29b-41d4-a716-446655440000"}
         ).scalar_one()
     assert str(ts2).startswith("2026-01-23 10:05:00")
 
@@ -76,12 +76,19 @@ def test_latest_newer_wins(engine):
 
 def test_run_log_success(engine):
     start_run_log(engine, run_id="r1", pipeline_name="wms", entity="ib_receipts")
-    finish_run_success(engine, run_id="r1", rows_in=10, inserted_history=7, upserted_latest=5)
+    finish_run_success(
+        engine,
+        run_id="r1",
+        pipeline_name="wms",
+        entity="ib_receipts",
+        rows_in=10,
+        inserted_history=7,
+        affected_latest=5,
+    )
 
     with engine.begin() as conn:
         status = conn.execute(
-            text("select status from pipeline_run_log where run_id='r1'")
+            text("select status from public.pipeline_run_log where run_id='r1' and entity='ib_receipts'")
         ).scalar_one()
 
     assert status == "success"
-    
