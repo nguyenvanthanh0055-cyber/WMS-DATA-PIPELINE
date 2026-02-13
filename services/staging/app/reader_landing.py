@@ -1,6 +1,5 @@
 from pathlib import Path
 import pandas as pd
-from services.common.config import load_config
 
 def reader_landing(landing_root: Path, entity: str, run_id: str) -> pd.DataFrame:
     path = landing_root / entity / f"run_id={run_id}"

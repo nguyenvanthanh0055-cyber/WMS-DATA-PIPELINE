@@ -1,8 +1,8 @@
 
 from services.common.db import build_engine
-from services.common.config import load_config
+from services.staging.app.config import load_staging_config
 from services.staging.app.payload import build_payload_and_hash
-from services.staging.app.pipeline_run_logs_repo import start_run_log, finish_run_success, finish_run_failed
+from services.common.pipeline_run_logs_repo import start_run_log, finish_run_success, finish_run_failed
 from services.staging.app.reader_landing import reader_landing
 from services.staging.app.staging_repo import insert_history, upsert_stg_latest
 import logging
@@ -31,21 +31,22 @@ def main(args: Optional[list[str]] = None) -> int:
     args = parse_args(args)
     entity = args.entity
     run_id = args.run_id
-    cfg = load_config()
-    engine = build_engine(cfg.pg_dsn)
+    cfg = load_staging_config()
+    engine = build_engine(cfg.common.pg_dsn)
+    pipeline_name = cfg.pipeline_name
 
     
     try:
         start_run_log(
             engine=engine,
             run_id=run_id,
-            pipeline_name=cfg.pipeline_name,
+            pipeline_name=pipeline_name,
             entity=entity
         )
 
         
         df = reader_landing(
-            landing_root=cfg.landing_root,
+            landing_root=cfg.common.landing_root,
             entity=entity,
             run_id=run_id
         )
@@ -57,9 +58,11 @@ def main(args: Optional[list[str]] = None) -> int:
             finish_run_success(
                 engine=engine,
                 run_id=run_id,
+                pipeline_name=pipeline_name,
+                entity=entity,
                 rows_in=0,
                 inserted_history=0,
-                upserted_latest=0
+                affected_latest=0
             )
         
         df2 = build_payload_and_hash(df)
@@ -71,7 +74,7 @@ def main(args: Optional[list[str]] = None) -> int:
             records=records,
             batch_size=args.batch_size    
             )
-        upsert_stg = upsert_stg_latest(
+        affected_latest = upsert_stg_latest(
             engine=engine,
             entity=entity,
             records=records,
@@ -80,9 +83,11 @@ def main(args: Optional[list[str]] = None) -> int:
         finish_run_success(
             engine=engine,
             run_id=run_id,
+            pipeline_name=pipeline_name,
+            entity=entity,
             rows_in=rows_in,
             inserted_history=inserted_history,
-            upserted_latest=upsert_stg
+            affected_latest=affected_latest
         )
         return 0
     except Exception as e:
@@ -91,6 +96,8 @@ def main(args: Optional[list[str]] = None) -> int:
             finish_run_failed(
                 engine=engine,
                 run_id=run_id,
+                pipeline_name=pipeline_name,
+                entity=entity,
                 error_message=str(e)
             )
         except Exception:

@@ -1,18 +1,16 @@
 from typing import Any, Iterator
-import pandas as pd
-import json
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 
 TABLE: dict[str, tuple[str, str]] = {
-    "ib_receipts": ("stg_ib_receipts_history", "stg_ib_receipts"),
-    "ob_orders": ("stg_ob_orders_history", "stg_ob_orders")
+    "ib_receipts": ("ib_receipts_history", "ib_receipts"),
+    "ob_orders": ("ob_orders_history", "ob_orders")
 }
 
 def _get_table(entity: str) -> tuple[str, str]:
     if entity not in TABLE:
-        return ValueError(f"Unsupported entity: {entity}")
+        raise ValueError(f"Unsupported entity: {entity}")
     return TABLE[entity]
 
 def _batch(
@@ -31,7 +29,7 @@ def insert_history(
     history_table, _ = _get_table(entity)
     
     sql = text(f"""
-    INSERT INTO {history_table}(
+    INSERT INTO stg.{history_table}(
         id, updated_at, payload,
         payload_hash, _run_id,
         _extracted_at, _watermark_effective
@@ -68,7 +66,7 @@ def upsert_stg_latest(
     _, latest_table = _get_table(entity)
     
     sql = text(f"""
-    INSERT INTO {latest_table}(
+    INSERT INTO stg.{latest_table}(
         id, updated_at, payload,
         payload_hash, _run_id,
         _extracted_at, _watermark_effective
@@ -97,23 +95,3 @@ def upsert_stg_latest(
             upserted += int(res.rowcount or 0)
     
     return upserted
-
-
-def df_to_records_for_db(df: pd.DataFrame) -> list[dict[str, Any]]:
-    records: list[dict[str, Any]] = []
-    
-    for row in df.to_dict(orient="records"):
-        payload = row["payload"]
-        payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        
-        records.append({
-            "id": row["id"],
-            "updated_at": row["updated_at"],
-            "payload": payload_json,
-            "payload_hash": row["payload_hash"],
-            "_run_id": row["_run_id"],
-            "_extracted_at": row["_extracted_at"],
-            "_watermark_effective": row["_watermark_effective"]
-        })
-    return records
-
