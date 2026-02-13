@@ -8,10 +8,9 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
-class Config:
+class CommonConfig:
     wms_base_url: str
     pg_dsn: str
-    pipeline_name: str
     limit: int
     lookback_seconds: int
     output_format: str
@@ -27,14 +26,13 @@ def _env_int(name: str, default: int) -> int:
     except ValueError as e:
         raise RuntimeError(f" ENV var {name} must be int, got {raw}") from e
     
-def load_config() -> Config:
+def load_common_config() -> CommonConfig:
     wms_base_url = os.getenv("WMS_BASE_URL","http://localhost:8000").rstrip("/")
     
     pg_dsn = os.getenv("PG_DSN")
     if not pg_dsn:
         raise RuntimeError("Missing required env var: PG_DSN")
         
-    pipeline_name = os.getenv("PIPELINE_NAME","wms_dw")
     limit = _env_int("LIMIT", 500)
     lookback_seconds = _env_int("LOOKBACK_SECONDS", 120)
     output_format = os.getenv("OUTPUT_FORMAT", "parquet").lower().strip()
@@ -52,10 +50,9 @@ def load_config() -> Config:
     else:
         project_root = Path(__file__).resolve().parents[3]
         landing_root = project_root / "data" / "landing"
-    return Config(
+    return CommonConfig(
         wms_base_url = wms_base_url,
         pg_dsn = pg_dsn,
-        pipeline_name = pipeline_name,
         limit = limit,
         lookback_seconds = lookback_seconds,
         output_format = output_format,
