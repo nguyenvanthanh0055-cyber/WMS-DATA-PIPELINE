@@ -62,7 +62,7 @@ def main(args: Optional[list[str]] = None) -> int:
         wm_effective = wm_saved - timedelta(seconds=cfg.common.lookback_seconds)
         
         with engine.begin() as conn:
-            row = conn.execute(text(sql_load),{"wm_effective":wm_effective}).fetchone()
+            row = conn.execute(text(sql_load),{"wm_effective":wm_effective}).mappings().first()
             new_wm = row["new_wm"]
             rows_inserted = row["rows_inserted"]
             rows_updated = row["rows_updated"]
@@ -102,6 +102,7 @@ def main(args: Optional[list[str]] = None) -> int:
             error_message=str(e)[:400]
         )
         raise
+    return 0
 
 if __name__ == "__main__":
     raise SystemExit(main())

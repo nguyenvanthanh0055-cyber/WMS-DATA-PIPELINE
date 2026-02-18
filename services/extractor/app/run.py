@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime, timedelta, timezone
 import uuid
-
+from typing import Optional
+import argparse
 from services.common.db import build_engine
 from services.extractor.app.config import load_extract_config
 from services.extractor.app.http_client import build_session
@@ -19,13 +20,18 @@ def _setup_logging() -> None:
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",
     )
 
-def main():
+def parse_args(args: Optional[list[str]] = None) -> argparse.Namespace:
+    p = argparse.ArgumentParser()
+    p.add_argument("--run-id", required=True, dest="run_id")
+    return p.parse_args()
+
+def main(args: Optional[list[str]] = None) -> int:
     _setup_logging()
     cfg = load_extract_config()
-
+    args = parse_args(args)
     engine = build_engine(cfg.common.pg_dsn)
     
-    run_id = uuid.uuid4().hex
+    run_id = args.run_id
     extracted_at = datetime.now(timezone.utc)
     session = build_session()
     entities = ["ib_receipts", "ob_orders"]
@@ -99,6 +105,8 @@ def main():
             len(rows),
             new_wm,
         )
+    
+    return 0
 
     
 if __name__ == "__main__":

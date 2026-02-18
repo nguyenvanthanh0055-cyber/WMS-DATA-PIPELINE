@@ -36,7 +36,8 @@ def write_landing(
     
     
     if final_path.exists():
-        raise RuntimeError(f"Landing output already exists: {final_path}")
+        logger.info("Landing already exists, skip %s", final_path)
+        return final_path
     
     
     tmp_path = run_dir / f"part-000.{uuid.uuid4().hex}.tmp.{ext}"

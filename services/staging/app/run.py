@@ -103,7 +103,6 @@ def main(args: Optional[list[str]] = None) -> int:
         except Exception:
             logger.exception("Failed to update run log entity=%s run_id%s", entity, run_id)
         
-        return 1
     
 if __name__ == "__main__":
     raise SystemExit(main())
