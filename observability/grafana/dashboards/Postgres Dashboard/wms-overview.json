@@ -1,0 +1,412 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_POSTGRES",
+      "label": "PostgreSQL",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "postgres",
+      "pluginName": "PostgreSQL"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.4.0"
+    },
+    {
+      "type": "datasource",
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select count(*) as total_ib_receipts_7d\nfrom mart.fact_ib_receipt f\nwhere f.created_at >= now() - interval '7 days'\n  and f.warehouse_key in (${warehouse:csv})\n  and f.client_key in (${client:csv});",
+          "refId": "A"
+        }
+      ],
+      "title": "Total IB Receipts (7d)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select count(*) as total_ob_orders_7d\nfrom mart.fact_ob_order f\nwhere f.created_at >= now() - interval '7 days'\n  and f.warehouse_key in (${warehouse:csv})\n  and f.client_key in (${client:csv});",
+          "refId": "A"
+        }
+      ],
+      "title": "Total OB Orders (7d)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select coalesce(sum(open_count), 0) as current_wip\nfrom (\n  select open_count\n  from mart.v_kpi_ib_wip_status\n  where warehouse_key in (${warehouse:csv})\n    and client_key in (${client:csv})\n  union all\n  select open_count\n  from mart.v_kpi_ob_wip_status\n  where warehouse_key in (${warehouse:csv})\n    and client_key in (${client:csv})\n) x;",
+          "refId": "A"
+        }
+      ],
+      "title": "Current WIP",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "select\n  d.date::timestamp as \"time\",\n  sum(k.receipts_created)::numeric as \"Receipts/day\"\nfrom mart.v_kpi_ib_daily k\njoin mart.dim_date d on d.date_key = k.date_key\nwhere d.date between $__timeFrom()::date and $__timeTo()::date\n  and k.warehouse_key in (${warehouse:csv})\n  and k.client_key in (${client:csv})\ngroup by 1\norder by 1;",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "select\n  d.date::timestamp as \"time\",\n  sum(k.orders_created)::numeric as \"Orders/day\"\nfrom mart.v_kpi_ob_daily k\njoin mart.dim_date d on d.date_key = k.date_key\nwhere d.date between $__timeFrom()::date and $__timeTo()::date\n  and k.warehouse_key in (${warehouse:csv})\n  and k.client_key in (${client:csv})\ngroup by 1\norder by 1;",
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "select\n  d.date::timestamp as \"time\",\n  (avg(k.otd_rate) * 100.0)::numeric as \"OTD%/day\"\nfrom mart.v_kpi_ob_daily k\njoin mart.dim_date d on d.date_key = k.date_key\nwhere d.date between $__timeFrom()::date and $__timeTo()::date\n  and k.warehouse_key in (${warehouse:csv})\n  and k.client_key in (${client:csv})\ngroup by 1\norder by 1;",
+          "refId": "C"
+        }
+      ],
+      "title": "Receipts, Orders, OTD% by Day",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 5,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select\n  f.order_id,\n  f.so_code,\n  w.warehouse_id,\n  c.client_id,\n  f.status,\n  f.expected_delivery_date,\n  f.actual_delivery_date,\n  f.delivery_delay_days\nfrom mart.fact_ob_order f\nleft join mart.dim_warehouse w on w.warehouse_key = f.warehouse_key\nleft join mart.dim_client c on c.client_key = f.client_key\nwhere f.created_at >= now() - interval '7 days'\n  and f.delivery_delay_days > 0\n  and f.warehouse_key in (${warehouse:csv})\n  and f.client_key in (${client:csv})\norder by f.delivery_delay_days desc nulls last\nlimit 50;",
+          "refId": "A"
+        }
+      ],
+      "title": "Top Late Orders (Last 7d)",
+      "type": "table"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "wms",
+    "overview"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${DS_POSTGRES}"
+        },
+        "definition": "select warehouse_key::text as __value, warehouse_id as __text from mart.dim_warehouse order by warehouse_id",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Warehouse",
+        "multi": true,
+        "name": "warehouse",
+        "options": [],
+        "query": "select warehouse_key::text as __value, warehouse_id as __text from mart.dim_warehouse order by warehouse_id",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${DS_POSTGRES}"
+        },
+        "definition": "select client_key::text as __value, client_id as __text from mart.dim_client order by client_id",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Client",
+        "multi": true,
+        "name": "client",
+        "options": [],
+        "query": "select client_key::text as __value, client_id as __text from mart.dim_client order by client_id",
+        "refresh": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "WMS Overview",
+  "uid": "wms-overview",
+  "version": 1,
+  "weekStart": ""
+}

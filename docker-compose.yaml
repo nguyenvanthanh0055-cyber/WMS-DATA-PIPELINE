@@ -15,6 +15,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-webserver:8080/execution/"
     AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
+
     AIRFLOW__EMAIL__EMAIL_BACKEND: airflow.utils.email.send_email_smtp
     AIRFLOW__SMTP__SMTP_HOST: "${AIRFLOW__SMTP__SMTP_HOST:-mailhog}"
     AIRFLOW__SMTP__SMTP_PORT: "${AIRFLOW__SMTP__SMTP_PORT:-1025}"
@@ -23,6 +24,11 @@ x-airflow-common: &airflow-common
     AIRFLOW__SMTP__SMTP_USER: "${AIRFLOW__SMTP__SMTP_USER:-}"
     AIRFLOW__SMTP__SMTP_PASSWORD: "${AIRFLOW__SMTP__SMTP_PASSWORD:-}"
     AIRFLOW__SMTP__SMTP_MAIL_FROM: "${AIRFLOW__SMTP__SMTP_MAIL_FROM:-airflow@local}"
+
+    AIRFLOW__METRICS__STATSD_ON: "True"
+    AIRFLOW__METRICS__STATSD_HOST: statsd-exporter
+    AIRFLOW__METRICS__STATSD_PORT: "8125"
+    AIRFLOW__METRICS__STATSD_PREFIX: airflow
 
     PG_DSN: postgresql+psycopg2://wms:wms@dw-db:5432/wms_dw
     TEST_PG_DSN: postgresql+psycopg2://wms:wms@dw-db:5432/wms_dw_test
@@ -158,7 +164,64 @@ services:
       - "8025:8025"
       - "1025:1025"
 
+  statsd-exporter:
+    image: prom/statsd-exporter:v0.27.1
+    container_name: statsd_exporter
+    ports:
+      - "9102:9102"
+      - "8125:8125/udp"
+    volumes:
+      - ./observability/statsd:/etc/statsd:ro
+    command:
+      - "--statsd.listen-udp=:8125"
+      - "--web.listen-address=:9102"
+      - "--statsd.mapping-config=/etc/statsd/statsd.yml"
+
+  postgres-exporter-airflow:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: pg_exporter_airflow
+    environment:
+      DATA_SOURCE_NAME: postgresql://airflow:airflow@airflow-db:5432/airflow?sslmode=disable
+    ports:
+      - "9187:9187"
+
+  postgres-exporter-dw:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: pg_exporter_dw
+    environment:
+      DATA_SOURCE_NAME: postgresql://wms:wms@dw-db:5432/wms_dw?sslmode=disable
+    ports:
+      - "9188:9187"
+
+  prometheus:
+    image: prom/prometheus:v2.53.2
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - statsd-exporter
+      - postgres-exporter-airflow
+      - postgres-exporter-dw
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
 volumes:
   airflow_pg_data:
   dw_pg_data:
   airflow_logs:
+  grafana_data:

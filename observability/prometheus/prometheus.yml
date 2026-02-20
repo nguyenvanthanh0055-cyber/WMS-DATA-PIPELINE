@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "statsd_exporter"
+    static_configs:
+      - targets: ["statsd-exporter:9102"]
+
+  - job_name: "postgres_airflow"
+    static_configs:
+      - targets: ["postgres-exporter-airflow:9187"]
+
+  - job_name: "postgres_dw"
+    static_configs:
+      - targets: ["postgres-exporter-dw:9187"]

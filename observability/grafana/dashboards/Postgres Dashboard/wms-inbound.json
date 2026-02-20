@@ -1,0 +1,259 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_POSTGRES",
+      "label": "PostgreSQL",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "postgres",
+      "pluginName": "PostgreSQL"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "id": null,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "select\n  date_trunc('day', f.created_at) as \"time\",\n  count(*)::numeric as \"Receipts/day\"\nfrom mart.fact_ib_receipt f\nwhere $__timeFilter(f.created_at)\n  and f.warehouse_key in (${warehouse:csv})\n  and f.client_key in (${client:csv})\ngroup by 1\norder by 1;",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "select\n  date_trunc('day', f.created_at) as \"time\",\n  avg(f.cycle_time_minutes)::numeric as \"Avg cycle time (min)\"\nfrom mart.fact_ib_receipt f\nwhere $__timeFilter(f.created_at)\n  and f.cycle_time_minutes is not null\n  and f.warehouse_key in (${warehouse:csv})\n  and f.client_key in (${client:csv})\ngroup by 1\norder by 1;",
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "select\n  date_trunc('day', f.created_at) as \"time\",\n  percentile_cont(0.95) within group (order by f.cycle_time_minutes)::numeric as \"P95 cycle time (min)\"\nfrom mart.fact_ib_receipt f\nwhere $__timeFilter(f.created_at)\n  and f.cycle_time_minutes is not null\n  and f.warehouse_key in (${warehouse:csv})\n  and f.client_key in (${client:csv})\ngroup by 1\norder by 1;",
+          "refId": "C"
+        }
+      ],
+      "title": "Receipts + Avg/P95 Cycle Time by Day",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 2,
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "auto"
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select\n  w.warehouse_id as warehouse,\n  avg(f.cycle_time_minutes)::numeric as avg_cycle_time_min\nfrom mart.fact_ib_receipt f\nleft join mart.dim_warehouse w on w.warehouse_key = f.warehouse_key\nwhere $__timeFilter(f.created_at)\n  and f.cycle_time_minutes is not null\n  and f.warehouse_key in (${warehouse:csv})\n  and f.client_key in (${client:csv})\ngroup by 1\norder by 2 desc;",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg Cycle Time by Warehouse",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 3,
+      "options": {
+        "bucketOffset": 0,
+        "bucketSize": 10,
+        "combine": false,
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom",
+          "showLegend": false
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select\n  f.cycle_time_minutes as cycle_time_minutes\nfrom mart.fact_ib_receipt f\nwhere $__timeFilter(f.created_at)\n  and f.cycle_time_minutes is not null\n  and f.warehouse_key in (${warehouse:csv})\n  and f.client_key in (${client:csv});",
+          "refId": "A"
+        }
+      ],
+      "title": "Cycle Time Distribution",
+      "type": "histogram"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "id": 4,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select\n  f.receipt_id,\n  f.po_code,\n  w.warehouse_id,\n  c.client_id,\n  f.status,\n  f.created_at,\n  round(extract(epoch from (now() - f.created_at)) / 3600.0, 2) as age_hours\nfrom mart.fact_ib_receipt f\nleft join mart.dim_warehouse w on w.warehouse_key = f.warehouse_key\nleft join mart.dim_client c on c.client_key = f.client_key\nwhere upper(coalesce(f.status,'')) not in ('FINISHED','CANCELLED')\n  and f.created_at is not null\n  and f.warehouse_key in (${warehouse:csv})\n  and f.client_key in (${client:csv})\norder by age_hours desc\nlimit 100;",
+          "refId": "A"
+        }
+      ],
+      "title": "Stuck Receipts (Unfinished + Age)",
+      "type": "table"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 39,
+  "tags": [
+    "wms",
+    "inbound"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${DS_POSTGRES}"
+        },
+        "definition": "select warehouse_key::text as __value, warehouse_id as __text from mart.dim_warehouse order by warehouse_id",
+        "includeAll": true,
+        "label": "Warehouse",
+        "multi": true,
+        "name": "warehouse",
+        "query": "select warehouse_key::text as __value, warehouse_id as __text from mart.dim_warehouse order by warehouse_id",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${DS_POSTGRES}"
+        },
+        "definition": "select client_key::text as __value, client_id as __text from mart.dim_client order by client_id",
+        "includeAll": true,
+        "label": "Client",
+        "multi": true,
+        "name": "client",
+        "query": "select client_key::text as __value, client_id as __text from mart.dim_client order by client_id",
+        "refresh": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timezone": "",
+  "title": "Inbound",
+  "uid": "wms-inbound",
+  "version": 1
+}
