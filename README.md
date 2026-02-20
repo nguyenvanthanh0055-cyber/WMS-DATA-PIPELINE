@@ -197,5 +197,3 @@ Pytest configuration is defined in `pytest.ini` (unit + integration tests).
 - Introduce a Spark-based transformation pipeline for high-volume data processing and backfills, with outputs published to mart_spark tables for dashboard consumption.
 
 ---
-
-If you use this repository as a portfolio project, this README highlights DE ownership across ingestion, modeling, orchestration, and observability.
