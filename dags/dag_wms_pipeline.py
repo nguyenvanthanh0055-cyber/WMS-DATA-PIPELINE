@@ -67,7 +67,7 @@ with DAG(
         on_failure_callback=_email_on_final_failure,
         bash_command = (
             "cd /opt/airflow/project &&"
-            "python -m services.extractor.app.run"
+            "python -m services.extractor.app.run "
             "--run-id {{dag_run.run_id}}"
         )
     )
