@@ -11,9 +11,47 @@ Main business domains:
 - Inbound receipts (`ib_receipts`)
 - Outbound orders (`ob_orders`)
 
-## 2. Architecture
+## 2. Key Features
+
+- End-to-end ELT pipeline for Warehouse Management System (WMS) data
+- Incremental data ingestion using watermark-based extraction
+- Layered data architecture: Landing → Staging → Mart
+- Apache Airflow orchestration with retries and monitoring
+- Dimensional data modeling (fact and dimension tables)
+- Observability with Prometheus, StatsD exporter, and Grafana dashboards
+- KPI views for inbound and outbound warehouse operations
+
+## 3. Architecture
 
 `Mock WMS API -> Extractor -> Landing (Parquet) -> Staging (history + latest) -> Mart (dimensions + facts + KPI views) -> Grafana`
+
+### Architecture Diagram
+
+            +----------------------+
+            |     Mock WMS API     |
+            |  (Orders, Receipts)  |
+            +----------+-----------+
+                       |
+                       v
+                 Extractor Service
+                       |
+                       v
+              Landing Zone (Parquet)
+                       |
+                       v
+              Staging Layer (PostgreSQL)
+                stg.<entity>_history
+             stg.<entity> (latest state)
+                       |
+                       v
+                 Mart Layer
+             mart.dim_* (dimensions)
+             mart.fact_* (facts)
+             KPI analytical views
+                       |
+                       v
+                   Grafana
+                (BI Dashboards)
 
 Core orchestration and platform components:
 
@@ -22,7 +60,7 @@ Core orchestration and platform components:
 - Prometheus + StatsD exporter + Postgres exporters
 - Grafana dashboards (WMS KPIs + Airflow monitoring)
 
-## 3. Repository Structure
+## 4. Repository Structure
 
 - `dags/`: Airflow DAG definitions (`wms_pipeline`)
 - `services/extractor/`: API extraction, normalization, landing writer
@@ -34,9 +72,9 @@ Core orchestration and platform components:
 - `observability/`: Grafana dashboards, datasource provisioning, Prometheus config
 - `tests/`: unit and integration tests
 
-## 4. Data Pipeline Design
+## 5. Data Pipeline Design
 
-### 4.1 Extract (Incremental)
+### 5.1 Extract (Incremental)
 
 Extractor job (`services/extractor/app/run.py`) reads watermark per entity from `public.etl_watermark`, applies lookback (`LOOKBACK_SECONDS`) to avoid missed updates, fetches paginated API data, normalizes records, and writes landing files.
 
@@ -48,7 +86,7 @@ Default output format:
 
 - Parquet (`OUTPUT_FORMAT=parquet`)
 
-### 4.2 Staging (Raw Vault-style pattern)
+### 5.2 Staging (Raw Vault-style pattern)
 
 Staging job (`services/staging/app/run.py`) reads landing data and writes to:
 
@@ -57,7 +95,7 @@ Staging job (`services/staging/app/run.py`) reads landing data and writes to:
 
 Each row carries metadata such as `_run_id`, `_extracted_at`, and `_watermark_effective` for traceability.
 
-### 4.3 Mart (Analytics Layer)
+### 5.3 Mart (Analytics Layer)
 
 Mart job (`services/mart/app/run.py`) executes SQL loaders in `sql/mart/` to populate:
 
@@ -71,7 +109,7 @@ KPI views for BI:
 - `mart.v_kpi_ib_wip_status`
 - `mart.v_kpi_ob_wip_status`
 
-### 4.4 Orchestration and Reliability
+### 5.4 Orchestration and Reliability
 
 Airflow DAG: `dags/dag_wms_pipeline.py`
 
@@ -86,9 +124,37 @@ Operational tracking tables:
 - `public.etl_watermark`
 - `public.pipeline_run_log`
 
-## 5. Observability and Dashboards
+## 6. Data Model
 
-### 5.1 Available Grafana Dashboards
+The analytical data warehouse follows a dimensional modeling approach to support efficient analytical queries and reporting.
+
+Core warehouse entities include:
+
+Dimensions:
+
+- `mart.dim_date`
+- `mart.dim_product`
+- `mart.dim_warehouse`
+
+Fact tables:
+
+- `mart.fact_ib_receipt`
+- `mart.fact_ob_order`
+
+## 7. Data Lineage
+
+Data flows through multiple transformation stages in the pipeline:
+
+1. Source API provides operational WMS data
+2. Extractor service retrieves incremental updates using watermark strategy
+3. Raw data is persisted to the landing zone in Parquet format
+4. Staging jobs normalize data and maintain both history and latest-state tables
+5. Mart jobs build analytical datasets using SQL transformations
+6. KPI views are consumed by Grafana dashboards
+
+## 8. Observability and Dashboards
+
+### 8.1 Available Grafana Dashboards
 
 WMS dashboards (`observability/grafana/dashboards/Postgres Dashboard/`):
 
@@ -102,7 +168,7 @@ Airflow dashboards (`observability/grafana/dashboards/Airflow Dashboard/`):
 - `airflow-dag-dashboard.json`
 - `airflow-cluster-dashboard.json`
 
-### 5.2 Metrics Stack
+### 8.2 Metrics Stack
 
 - Airflow emits StatsD metrics -> `statsd-exporter`
 - Prometheus scrapes:
@@ -117,9 +183,9 @@ Note:
 - Current provisioning includes Prometheus datasource by default.
 - For WMS Postgres dashboards, create/import a PostgreSQL datasource in Grafana, then map it during dashboard import.
 
-## 6. Local Setup
+## 9. Local Setup
 
-### 6.1 Prerequisites
+### 9.1 Prerequisites
 
 - Docker + Docker Compose
 - Make sure ports are available:
@@ -130,7 +196,7 @@ Note:
   - 5433 (Airflow Postgres)
   - 8000 (Mock API)
 
-### 6.2 Start the Full Stack
+### 9.2 Start the Full Stack
 
 ```bash
 docker compose up -d --build
@@ -138,7 +204,7 @@ docker compose up -d --build
 
 DW initialization runs automatically via `sql/run_all.sh` mounted to Postgres init.
 
-### 6.3 Access Services
+### 9.3 Access Services
 
 - Airflow: `http://localhost:8080` (`admin/admin`)
 - Grafana: `http://localhost:3000` (`admin/admin`)
@@ -146,9 +212,9 @@ DW initialization runs automatically via `sql/run_all.sh` mounted to Postgres in
 - MailHog: `http://localhost:8025`
 - Mock API: `http://localhost:8000`
 
-## 7. Running Pipeline Jobs
+## 10. Running Pipeline Jobs
 
-### 7.1 Trigger DAG in Airflow
+### 10.1 Trigger DAG in Airflow
 
 DAG ID: `wms_pipeline`
 
@@ -158,7 +224,7 @@ You can trigger from UI or CLI:
 docker compose exec airflow-webserver airflow dags trigger wms_pipeline
 ```
 
-### 7.2 Run Service Modules Manually (inside Airflow container)
+### 10.2 Run Service Modules Manually (inside Airflow container)
 
 ```bash
 docker compose exec airflow-webserver bash
@@ -170,7 +236,7 @@ python -m services.mart.app.run --entity ib_receipts --run-id manual_001
 python -m services.mart.app.run --entity ob_orders --run-id manual_001
 ```
 
-## 8. Testing
+## 11. Testing
 
 Run tests from project root:
 
@@ -180,7 +246,25 @@ pytest
 
 Pytest configuration is defined in `pytest.ini` (unit + integration tests).
 
-## 9. Data Engineer Notes
+## 12. Design Decisions
+
+### 12.1 Layered Architecture
+
+The pipeline follows a layered data architecture:
+
+Landing → Staging → Mart
+
+This separation allows raw ingested data to remain immutable while enabling transformations and analytical modeling in downstream layers.
+
+### 12.2 Incremental Processing
+
+Instead of full refresh loads, the pipeline uses a watermark-based incremental extraction strategy with a configurable lookback window to handle late updates.
+
+### 12.3 SQL-first Mart Layer
+
+Transformations in the mart layer are implemented using SQL scripts to keep business logic transparent and easily reviewable.
+
+## 13. Data Engineer Notes
 
 - Incremental extraction is watermark-driven with a configurable lookback window.
 - Staging keeps both full history and latest-state tables for replay/debugging.
@@ -188,12 +272,12 @@ Pytest configuration is defined in `pytest.ini` (unit + integration tests).
 - `pipeline_run_log` enables per-run auditability (rows in, rows written, status, errors).
 - Dashboards are separated into business KPIs (WMS) and platform reliability (Airflow).
 
-## 10. Future Improvements
+## 14. Future Improvements
 
-- Add Grafana PostgreSQL datasource provisioning as code.
-- Add data quality tests (freshness, null checks, referential checks) in pipeline.
-- Add CI workflow for tests + SQL linting.
-- Add partitioning/index strategy for high-volume staging history tables.
-- Introduce a Spark-based transformation pipeline for high-volume data processing and backfills, with outputs published to mart_spark tables for dashboard consumption.
+- Add automated data quality tests (freshness, null checks, referential integrity)
+- Introduce CI pipeline for tests and SQL linting
+- Implement partitioning strategy for large staging tables
+- Add Spark-based transformation pipeline for high-volume processing
+- Implement Slowly Changing Dimension (SCD) support for historical tracking
 
 ---
